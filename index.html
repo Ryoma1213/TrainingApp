@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#172b27">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Training Log">
+  <meta name="format-detection" content="telephone=no">
+  <title>Training Log | 週4トレーニング</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner"><a href="#home" class="brand"><span class="brand-mark">T</span><span>TRAINING <b>LOG</b><small>週4プログラム</small></span></a><span class="local-badge">このブラウザに保存</span></div></header>
+  <nav aria-label="メインナビゲーション">
+    <a href="#home"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16m-12 4h2m4 0h2"/></svg><span>プログラム</span></a>
+    <a href="#session"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M9 2h6m-3 7v4l3 2"/></svg><span>セッション</span></a>
+    <a href="#history"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v17H5zM8 8h8m-8 4h8m-8 4h5"/></svg><span>履歴</span></a>
+    <a href="#settings"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>設定</span></a>
+  </nav>
+  <div id="storage-alert" role="alert"></div>
+  <main id="app"></main>
+  <footer>フォームと安全を優先。rep上限に到達したらセットを終了。</footer>
+  <div id="input-accessory" class="input-accessory" role="group" aria-label="入力操作" hidden>
+    <button type="button" data-input-action="previous" aria-label="前の入力欄へ">前へ</button>
+    <button type="button" data-input-action="next" aria-label="次の入力欄へ">次へ</button>
+    <button type="button" data-input-action="done">入力を閉じる</button>
+  </div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
