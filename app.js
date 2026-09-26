@@ -102,7 +102,7 @@ app.addEventListener('click', event => {
       case 'delete-cancel': confirmDeleteId = null; break;
       case 'delete-confirm': {
         if (confirmDeleteId !== b.dataset.session) throw new Error('削除の確認からやり直してください。');
-        const remaining = removeSession(data.sessions, confirmDeleteId);
+        const remaining = structuredClone(removeSession(data.sessions, confirmDeleteId));
         const updated = { ...data, sessions: remaining };
         recalculate(updated.sessions);
         storage.save(updated);
