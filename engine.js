@@ -116,3 +116,8 @@ export function recalculate(sessions) {
   }
   return states;
 }
+
+export function removeSession(sessions, id) {
+  if (!sessions.some(s => s.id === id)) throw new Error('削除する履歴が見つかりません。');
+  return sessions.filter(s => s.id !== id);
+}

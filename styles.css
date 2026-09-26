@@ -77,3 +77,13 @@ summary::-webkit-details-marker{display:none}
 @media(max-height:500px) and (max-width:540px){
   body.editing-input .input-accessory{padding-top:4px;padding-bottom:max(4px,env(safe-area-inset-bottom))}
 }
+
+.delete-area{margin-top:28px;border-color:#e8c5bf}
+.delete-area h2{font-size:1rem;margin-bottom:8px}
+.delete-area .hint{margin-bottom:14px}
+.danger-outline{color:#943b31;border-color:#ce8177;background:#fffafa}
+.danger{background:#a43f34;border-color:#a43f34;color:#fff}
+.delete-confirm{padding:14px;border:1px solid #e3aaa1;border-radius:12px;background:#fff4f2;overflow-wrap:anywhere}
+.delete-confirm p{font-size:.88rem;margin-bottom:12px}
+.delete-confirm .button-row{margin-bottom:0}
+@media(max-width:540px){.delete-confirm .button-row{display:grid;grid-template-columns:1fr}.delete-confirm .button-row button{width:100%}}

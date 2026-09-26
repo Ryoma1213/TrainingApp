@@ -1,5 +1,5 @@
 import { program, exercises, equipmentNames, weightNotes, defaultConfig } from './program.js';
-import { dayOf, exerciseOf, elapsed, createSession, startPermission, startSet, completeSet, restRemaining, adjustRest, pauseRest, endRest, toggleWait, exclusionReasons, finishSession, recalculate, validateEntry } from './engine.js';
+import { dayOf, exerciseOf, elapsed, createSession, startPermission, startSet, completeSet, restRemaining, adjustRest, pauseRest, endRest, toggleWait, exclusionReasons, finishSession, recalculate, removeSession, validateEntry } from './engine.js';
 import * as storage from './storage.js';
 import { installMobileInputs } from './mobile.js';
 const refreshMobileInputs = installMobileInputs();
@@ -7,7 +7,7 @@ const app = document.querySelector('#app');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const time = seconds => { const t = Math.max(0, Math.floor(seconds)); return `${Math.floor(t / 60).toString().padStart(2, '0')}:${(t % 60).toString().padStart(2, '0')}`; };
 const date = value => new Date(value).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-let data, states, fatal = false, error = '', notice = '', confirmEnd = false;
+let data, states, fatal = false, error = '', notice = '', navigationNotice = '', confirmEnd = false, confirmDeleteId = null;
 try { data = storage.load(); validateImport(data); states = recalculate(data.sessions); }
 catch (e) { fatal = true; app.innerHTML = `<section class="card"><h1>保存データを保護しています</h1><p>${esc(e.message)}</p><p>同じブラウザの保存データを確認してください。自動初期化は行いません。</p></section>`; }
 function persist() {
@@ -50,7 +50,7 @@ function resultsView(s) {
 }
 function renderHistory(id) {
   const selected = data.sessions.find(s => s.id === id);
-  if (selected) return heading('SESSION RECORD', `${dayOf(selected).day} · ${dayOf(selected).title}`, date(selected.startedAt)) + `<a href="#history" class="back-link">← 履歴一覧</a><section class="card"><div class="card-top"><h2>セッション完了</h2><span class="badge">${selected.eligible ? '判定対象' : '対象外／判定保留'}</span></div><p>実終了 ${date(selected.endedAt)}<br>所要時間 ${time(elapsed(selected))}<br>実施 ${selected.logs.filter(r => r.performed).length} / ${selected.logs.length} セット</p>${selected.exclusionReasons.length ? `<p class="notice">${esc(selected.exclusionReasons.join(' / '))}</p>` : ''}<p class="hint">器具待機の合計：${time(selected.waits.reduce((n, w) => n + (w.endedAt - w.startedAt) / 1000, 0))}（Restとは別管理）</p>${resultsView(selected)}</section>${reasonForm(selected)}<section class="card"><h2>各セットの記録</h2>${logList(selected)}</section>`;
+  if (selected) return heading('SESSION RECORD', `${dayOf(selected).day} · ${dayOf(selected).title}`, date(selected.startedAt)) + `<a href="#history" class="back-link">← 履歴一覧</a><section class="card"><div class="card-top"><h2>セッション完了</h2><span class="badge">${selected.eligible ? '判定対象' : '対象外／判定保留'}</span></div><p>実終了 ${date(selected.endedAt)}<br>所要時間 ${time(elapsed(selected))}<br>実施 ${selected.logs.filter(r => r.performed).length} / ${selected.logs.length} セット</p>${selected.exclusionReasons.length ? `<p class="notice">${esc(selected.exclusionReasons.join(' / '))}</p>` : ''}<p class="hint">器具待機の合計：${time(selected.waits.reduce((n, w) => n + (w.endedAt - w.startedAt) / 1000, 0))}（Restとは別管理）</p>${resultsView(selected)}</section>${reasonForm(selected)}<section class="card"><h2>各セットの記録</h2>${logList(selected)}</section><section class="card compact delete-area"><h2>この履歴を削除</h2>${confirmDeleteId === selected.id ? `<div class="delete-confirm" role="group" aria-label="履歴削除の確認"><p><b>${date(selected.startedAt)}の${dayOf(selected).day}の記録</b>を削除します。セットログも消え、残る履歴の判定と次回重量が再計算されます。元に戻せません。</p><div class="button-row">${button('delete-cancel', '削除しない', '', 'secondary')}${button('delete-confirm', 'この1件を削除する', `data-session="${selected.id}"`, 'danger')}</div></div>` : `<p class="hint">誤って作成したセッションなどを1件ずつ削除できます。</p>${button('delete-session', '削除の確認へ', `data-session="${selected.id}"`, 'danger-outline')}`}</section>`;
   return heading('HISTORY', '積み重ねた記録', `${data.sessions.length}セッションを保存しています。`) + (data.sessions.length ? `<div class="history-list">${[...data.sessions].reverse().map(s => `<a class="card history-card" href="#history/${s.id}"><span class="eyebrow">${date(s.startedAt)}</span><h2>${dayOf(s).day} · ${dayOf(s).title}</h2><p>${s.logs.filter(r => r.performed).length} / ${s.logs.length} セット · ${time(elapsed(s))}</p><span class="badge">${s.eligible ? '判定対象' : '対象外／判定保留'}</span><span class="detail-link">記録を確認 →</span></a>`).join('')}</div>` : '<section class="card empty"><h2>最初の記録を、ここから。</h2><p>終了したセッションと次回重量がここに表示されます。</p><a class="button primary" href="#home">プログラムを選ぶ</a></section>');
 }
 function renderSettings() {
@@ -98,6 +98,20 @@ app.addEventListener('click', event => {
       case 'finish-cancel': confirmEnd = false; break;
       case 'finish-confirm': finishSession(s); data.sessions.push(s); data.active = null; confirmEnd = false; location.hash = `history/${s.id}`; break;
       case 'backup': storage.backup(data); break;
+      case 'delete-session': if (!data.sessions.some(item => item.id === b.dataset.session)) throw new Error('削除する履歴が見つかりません。'); confirmDeleteId = b.dataset.session; break;
+      case 'delete-cancel': confirmDeleteId = null; break;
+      case 'delete-confirm': {
+        if (confirmDeleteId !== b.dataset.session) throw new Error('削除の確認からやり直してください。');
+        const remaining = removeSession(data.sessions, confirmDeleteId);
+        const updated = { ...data, sessions: remaining };
+        recalculate(updated.sessions);
+        storage.save(updated);
+        data = updated;
+        confirmDeleteId = null;
+        location.hash = 'history';
+        navigationNotice = '履歴を1件削除し、判定と次回重量を再計算しました。';
+        break;
+      }
       case 'import-cancel': pendingImport = null; break;
       case 'import-confirm': if (!pendingImport || data.active) throw new Error('セッション中は復元できません。'); storage.backup(data); data = pendingImport; pendingImport = null; states = recalculate(data.sessions); notice = '復元しました。置換前のデータもバックアップに保存しました。'; break;
     }
@@ -188,6 +202,6 @@ function validateImport(candidate) {
     if (!Array.isArray(s.startedBlocks) || s.waits.some(w => !Number.isFinite(w.startedAt) || !Number.isFinite(w.endedAt))) throw new Error('状態履歴が不正です。');
   }
 }
-window.addEventListener('hashchange', () => { error = ''; notice = ''; render(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { error = ''; notice = navigationNotice; navigationNotice = ''; confirmDeleteId = null; render(); window.scrollTo(0, 0); });
 window.addEventListener('storage', event => { if (event.key === storage.KEY) { fatal = true; app.innerHTML = '<section class="card"><h1>別のタブで記録が更新されました</h1><p>データの競合を避けるため操作を停止しました。このページを再読み込みしてください。</p></section>'; } });
 if (!fatal) { render(); setInterval(tick, 250); }
